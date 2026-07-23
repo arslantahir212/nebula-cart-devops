@@ -1,0 +1,10 @@
+services:
+  nebula-cart:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nebula-cart:1.0
+    container_name: nebula-cart
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
