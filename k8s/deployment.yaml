@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nebula-cart
+  namespace: nebula-cart
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nebula-cart
+  template:
+    metadata:
+      labels:
+        app: nebula-cart
+    spec:
+      containers:
+        - name: nebula-cart
+          image: arslanlinux/nebula-cart:2
+          ports:
+            - containerPort: 5173

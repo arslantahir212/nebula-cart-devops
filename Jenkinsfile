@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "arslanlinux/nebula-cart"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
@@ -36,6 +37,19 @@ pipeline {
                         docker push ${DOCKER_IMAGE}:latest
                     '''
                 }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl set image deployment/nebula-cart \
+                    nebula-cart=${DOCKER_IMAGE}:${BUILD_NUMBER} \
+                    -n nebula-cart
+
+                    kubectl rollout status deployment/nebula-cart \
+                    -n nebula-cart
+                '''
             }
         }
     }
