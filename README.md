@@ -1,152 +1,669 @@
-# NebulaCart
+# NebulaCart — DevOps CI/CD Project
 
-> **A premium, futuristic eCommerce storefront** built with React and Vite.
-> Dark neon UI with glassmorphism accents — production-ready, containerised, and Kubernetes-deployable.
+> A premium, futuristic electronics eCommerce storefront built with React and Vite, containerised with Docker, automated with Jenkins CI/CD, and deployed to Kubernetes using kind on AWS EC2.
 
 ---
 
 ## Project Overview
 
-NebulaCart is a single-page electronics storefront designed for visual impact and clean architecture. It features a curated catalogue of 12 premium products, real-time cart management via React Context, debounced search, category filtering, and a fully responsive layout that looks great from mobile to ultra-wide.
+NebulaCart is a single-page electronics storefront designed with a modern dark neon UI and glassmorphism-inspired design.
 
-The project ships with a multi-stage Docker build and Kubernetes manifests so it can be deployed anywhere — local KIND clusters, managed cloud Kubernetes, or plain Docker.
+The application includes:
+
+- 12 premium electronics products
+- Product search
+- Category filtering
+- Shopping cart management
+- React Context and useReducer state management
+- Responsive user interface
+- Docker containerisation
+- Kubernetes deployment
+- Automated Jenkins CI/CD pipeline
+
+This project was extended into a complete DevOps workflow that automatically builds, versions, publishes, and deploys the application.
 
 ---
 
-## Tech Stack
+# DevOps Architecture
 
-| Layer        | Technology                          |
-| ------------ | ----------------------------------- |
-| Framework    | React 19 (Vite 7)                   |
-| Styling      | Tailwind CSS v4                     |
-| Icons        | Lucide React                        |
-| State        | React Context + useReducer          |
-| Container    | Docker (multi-stage, Node 20 Alpine)|
-| Orchestration| Kubernetes / KIND                   |
+```text
+                    Developer
+                        |
+                        v
+                  GitHub Repository
+                        |
+                        v
+                     Jenkins
+                        |
+                 Checkout Source
+                        |
+                        v
+                Build Docker Image
+                        |
+                        v
+            Tag with BUILD_NUMBER
+                        |
+                        v
+                  Docker Hub
+                        |
+                        v
+             Update Kubernetes Image
+                        |
+                        v
+               Kubernetes (kind)
+                        |
+              +---------+---------+
+              |                   |
+              v                   v
+           Pod 1               Pod 2
+         Replica 1            Replica 2
+              |                   |
+              +---------+---------+
+                        |
+                        v
+               Kubernetes Service
+                        |
+                        v
+                  NodePort 30080
+                        |
+                        v
+                 AWS EC2 Public IP
+                        |
+                        v
+              NebulaCart Application
+```
 
 ---
 
-## Quick Start — Local Development
+# Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 |
+| Build Tool | Vite |
+| Styling | Tailwind CSS |
+| Icons | Lucide React |
+| State Management | React Context + useReducer |
+| Containerisation | Docker |
+| Container Registry | Docker Hub |
+| CI/CD | Jenkins |
+| Orchestration | Kubernetes |
+| Kubernetes Environment | kind |
+| CLI | kubectl |
+| Cloud Environment | AWS EC2 |
+| Source Control | Git & GitHub |
+
+---
+
+# Local Development
+
+## Install Dependencies
 
 ```bash
-# 1. Install dependencies
 npm install
+```
 
-# 2. Start dev server (http://localhost:5173)
+## Start Development Server
+
+```bash
 npm run dev
 ```
 
-The dev server runs on **port 5173** with hot module replacement.
+The development server runs on:
 
----
+```text
+http://localhost:5173
+```
 
 ## Production Build
 
 ```bash
-npm run build    # outputs to ./dist
-npm run preview  # preview at http://localhost:5173
+npm run build
+```
+
+The production build is generated in:
+
+```text
+dist/
 ```
 
 ---
 
-## Docker
+# Docker
 
-### Build the image
+The application uses a multi-stage Docker build.
+
+## Build Docker Image
 
 ```bash
-docker build -t nebulacart:latest .
+docker build -t nebula-cart:1.0 .
 ```
 
-### Run the container
+## Run Docker Container
 
 ```bash
-docker run -d -p 5173:5173 --name nebulacart nebulacart:latest
+docker run -d \
+  --name nebula-cart \
+  -p 5173:5173 \
+  nebula-cart:1.0
 ```
 
-Open **http://localhost:5173** in your browser.
+The application can then be accessed at:
 
-### Stop & remove
+```text
+http://localhost:5173
+```
+
+## Check Running Container
 
 ```bash
-docker stop nebulacart && docker rm nebulacart
+docker ps
+```
+
+## Stop Container
+
+```bash
+docker stop nebula-cart
+```
+
+## Remove Container
+
+```bash
+docker rm nebula-cart
+```
+
+---
+
+# Docker Hub
+
+The application Docker images are stored in Docker Hub.
+
+Docker Hub repository:
+
+```text
+arslanlinux/nebula-cart
+```
+
+The Jenkins pipeline creates versioned Docker images using the Jenkins `BUILD_NUMBER`.
+
+Examples:
+
+```text
+arslanlinux/nebula-cart:1
+arslanlinux/nebula-cart:2
+arslanlinux/nebula-cart:3
+```
+
+The pipeline also maintains:
+
+```text
+arslanlinux/nebula-cart:latest
+```
+
+Versioned image tags allow each Jenkins build to be identified and deployed independently.
+
+---
+
+# Jenkins CI/CD Pipeline
+
+The CI/CD pipeline is defined in:
+
+```text
+Jenkinsfile
+```
+
+The pipeline automates the process from source code to Kubernetes deployment.
+
+## Pipeline Stages
+
+### 1. Checkout
+
+Jenkins checks out the latest source code from the GitHub `main` branch.
+
+```text
+GitHub
+   |
+   v
+Jenkins Checkout
+```
+
+---
+
+### 2. Build Docker Image
+
+Jenkins builds the Docker image using the current Jenkins build number.
+
+Example:
+
+```text
+arslanlinux/nebula-cart:3
+```
+
+The image is also tagged as:
+
+```text
+arslanlinux/nebula-cart:latest
+```
+
+---
+
+### 3. Push to Docker Hub
+
+Jenkins authenticates with Docker Hub using Jenkins credentials and pushes both image tags.
+
+```text
+arslanlinux/nebula-cart:${BUILD_NUMBER}
+```
+
+and:
+
+```text
+arslanlinux/nebula-cart:latest
+```
+
+---
+
+### 4. Deploy to Kubernetes
+
+After successfully pushing the image, Jenkins updates the Kubernetes Deployment.
+
+The deployment command is:
+
+```bash
+kubectl set image deployment/nebula-cart \
+nebula-cart=arslanlinux/nebula-cart:${BUILD_NUMBER} \
+-n nebula-cart
+```
+
+Jenkins then waits for the Kubernetes rolling update to complete:
+
+```bash
+kubectl rollout status deployment/nebula-cart \
+-n nebula-cart
+```
+
+---
+
+# Complete CI/CD Workflow
+
+```text
+Developer Pushes Code
+        |
+        v
+GitHub
+        |
+        v
+Jenkins
+        |
+        v
+Checkout Source Code
+        |
+        v
+Build Docker Image
+        |
+        v
+Tag Image with BUILD_NUMBER
+        |
+        v
+Push Image to Docker Hub
+        |
+        v
+Update Kubernetes Deployment
+        |
+        v
+Kubernetes Rolling Update
+        |
+        v
+Two New Application Pods
+        |
+        v
+Live NebulaCart Application
+```
+
+---
+
+# Kubernetes Deployment
+
+The Kubernetes configuration is stored in:
+
+```text
+k8s/
+```
+
+The directory contains:
+
+```text
+k8s/
+├── deployment.yaml
+├── kind-config.yaml
+├── namespace.yaml
+└── service.yaml
+```
+
+---
+
+## Kubernetes Namespace
+
+The application runs inside the following namespace:
+
+```text
+nebula-cart
+```
+
+Create the namespace:
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+```
+
+Check namespaces:
+
+```bash
+kubectl get namespaces
 ```
 
 ---
 
 ## Kubernetes Deployment
 
-### Option A — KIND (Kubernetes IN Docker)
+The application is deployed using a Kubernetes Deployment with two replicas.
+
+Apply the Deployment:
 
 ```bash
-# 1. Create a KIND cluster
-kind create cluster --name nebulacart-cluster
-
-# 2. Load the Docker image into KIND
-kind load docker-image nebulacart:latest --name nebulacart-cluster
-
-# 3. Apply manifests
 kubectl apply -f k8s/deployment.yaml
-
-# 4. Verify pods are running
-kubectl get pods -l app=nebulacart
-
-# 5. Port-forward to access the app
-kubectl port-forward svc/nebulacart-service 5173:5173
-
-# Open http://localhost:5173
 ```
 
-### Option B — Any Kubernetes Cluster
+Check the Deployment:
 
 ```bash
-# Push image to your registry first, then:
-kubectl apply -f k8s/deployment.yaml
-kubectl get pods -l app=nebulacart
-kubectl port-forward svc/nebulacart-service 5173:5173
+kubectl get deployment -n nebula-cart
 ```
 
-### Useful kubectl Commands
+Expected result:
+
+```text
+READY   UP-TO-DATE   AVAILABLE
+2/2     2            2
+```
+
+Check the Pods:
 
 ```bash
-kubectl get all -l app=nebulacart       # List all resources
-kubectl logs -l app=nebulacart          # View logs
-kubectl describe pod -l app=nebulacart  # Inspect pod details
-kubectl scale deploy nebulacart --replicas=3  # Scale up
-kubectl delete -f k8s/deployment.yaml   # Tear down
+kubectl get pods -n nebula-cart
+```
+
+Both Pods should be in the `Running` state.
+
+---
+
+## Kubernetes Service
+
+The application is exposed using a Kubernetes NodePort Service.
+
+Apply the Service:
+
+```bash
+kubectl apply -f k8s/service.yaml
+```
+
+Check the Service:
+
+```bash
+kubectl get service -n nebula-cart
+```
+
+The application is exposed through:
+
+```text
+NodePort: 30080
 ```
 
 ---
 
-## Folder Structure
+# kind Kubernetes Cluster
 
+The Kubernetes cluster was created using kind.
+
+The cluster configuration is stored in:
+
+```text
+k8s/kind-config.yaml
 ```
+
+The configuration maps port `30080` from the kind node to the EC2 host.
+
+Create the cluster:
+
+```bash
+kind create cluster \
+  --name nebula-cart \
+  --config k8s/kind-config.yaml
+```
+
+Check the cluster:
+
+```bash
+kind get clusters
+```
+
+Check Kubernetes nodes:
+
+```bash
+kubectl get nodes
+```
+
+Expected result:
+
+```text
+nebula-cart-control-plane   Ready
+```
+
+---
+
+# Kubernetes Verification
+
+Check all resources:
+
+```bash
+kubectl get all -n nebula-cart
+```
+
+Check Pods:
+
+```bash
+kubectl get pods -n nebula-cart
+```
+
+Check Deployment:
+
+```bash
+kubectl get deployment nebula-cart -n nebula-cart
+```
+
+Check Service:
+
+```bash
+kubectl get service -n nebula-cart
+```
+
+Check the deployed Docker image:
+
+```bash
+kubectl describe deployment nebula-cart \
+  -n nebula-cart | grep Image
+```
+
+Example:
+
+```text
+Image: arslanlinux/nebula-cart:3
+```
+
+---
+
+# Successful CI/CD Deployment
+
+The complete CI/CD pipeline was successfully tested.
+
+During Jenkins Build #3:
+
+```text
+Jenkins Build #3
+        |
+        v
+Build arslanlinux/nebula-cart:3
+        |
+        v
+Push to Docker Hub
+        |
+        v
+Update Kubernetes Deployment
+        |
+        v
+Kubernetes Rolling Update
+        |
+        v
+2 New Pods Running
+        |
+        v
+NebulaCart Live
+```
+
+The Kubernetes Deployment was successfully updated to:
+
+```text
+arslanlinux/nebula-cart:3
+```
+
+The two application replicas were confirmed to be running.
+
+The application was also successfully accessed through the AWS EC2 public IP using NodePort `30080`.
+
+---
+
+# Application Access
+
+The deployed application is accessible using:
+
+```text
+http://YOUR_EC2_PUBLIC_IP:30080
+```
+
+Example:
+
+```text
+http://54.91.122.176:30080
+```
+
+The application was successfully tested through the EC2 public IP and confirmed to be running from Kubernetes.
+
+---
+
+# Project Structure
+
+```text
 nebula_cart/
-├── public/                  # Static assets (favicon)
+├── public/
 ├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── CartDrawer.jsx   # Slide-out cart panel
-│   │   ├── CategoryFilter.jsx
-│   │   ├── Footer.jsx
-│   │   ├── HeroBanner.jsx
-│   │   ├── Navbar.jsx
-│   │   ├── ProductCard.jsx
-│   │   ├── ProductGrid.jsx
-│   │   ├── SearchBar.jsx
-│   │   └── SkeletonCard.jsx # Loading placeholder
+│   ├── components/
 │   ├── context/
-│   │   └── CartContext.jsx  # Global cart state (Context + useReducer)
 │   ├── data/
-│   │   └── products.json    # Mock product catalogue
 │   ├── hooks/
-│   │   └── useDebounce.js   # Debounce hook for search
-│   ├── App.jsx              # Root layout
-│   ├── main.jsx             # Entry point
-│   └── index.css            # Tailwind imports + global styles
-├── Dockerfile               # Multi-stage production build
-├── .dockerignore
-├── vite.config.js
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── k8s/
+│   ├── deployment.yaml
+│   ├── kind-config.yaml
+│   ├── namespace.yaml
+│   └── service.yaml
+├── Dockerfile
+├── docker-compose.yml
+├── Jenkinsfile
 ├── package.json
+├── package-lock.json
 └── README.md
+```
+
+---
+
+# Key DevOps Concepts Demonstrated
+
+This project provided practical experience with:
+
+- Git and GitHub
+- Docker containerisation
+- Docker multi-stage builds
+- Docker image tagging
+- Docker Hub
+- Jenkins CI/CD
+- Jenkins credentials
+- Jenkins build numbers
+- Automated Docker image publishing
+- Kubernetes Namespaces
+- Kubernetes Deployments
+- Kubernetes ReplicaSets
+- Kubernetes Pods
+- Kubernetes Services
+- Kubernetes NodePort
+- Kubernetes rolling updates
+- kind Kubernetes clusters
+- kubectl
+- AWS EC2
+- End-to-end CI/CD automation
+
+---
+
+# Project Outcome
+
+This project demonstrates a complete end-to-end DevOps CI/CD workflow:
+
+```text
+Code Change
+     |
+     v
+GitHub
+     |
+     v
+Jenkins
+     |
+     v
+Docker Build
+     |
+     v
+Versioned Docker Image
+     |
+     v
+Docker Hub
+     |
+     v
+Kubernetes Deployment
+     |
+     v
+Rolling Update
+     |
+     v
+2 Running Replicas
+     |
+     v
+Live Application
+```
+
+A new code change can be processed through the CI/CD pipeline, packaged into a versioned Docker image, pushed to Docker Hub, and automatically deployed to Kubernetes.
+
+---
+
+# Author
+
+**Muhammad Arslan Tahir**
+
+DevOps Engineering Learner
+
+GitHub:
+
+```text
+https://github.com/arslantahir212
 ```
 
 ---
